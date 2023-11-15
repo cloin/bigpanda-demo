@@ -1,0 +1,14 @@
+---
+- name: Bigpanda incident events
+  hosts: all
+  sources:
+    - bigpanda_incidents:
+        api_token: 
+        environment_id: 
+        interval: 5
+
+  rules:
+    - name: R1 - Debug all
+      condition: event.meta is defined
+      action:
+        debug:
