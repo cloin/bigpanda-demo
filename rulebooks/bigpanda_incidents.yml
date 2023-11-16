@@ -6,6 +6,7 @@
         api_token: 
         environment_id: 
         interval: 5
+        return_first_poll: false
 
   rules:
     - name: R1 - Debug all
