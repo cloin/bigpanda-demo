@@ -1,6 +1,6 @@
 # BigPanda Incidents Ansible Plugin
 
-This collection contains an event source plugin, rulebook(s) and playbook(s) to demonstrate Event-Driven Ansible with Bigpanda.
+This collection contains an event source plugin, rulebook(s) and playbook(s) to demonstrate Event-Driven Ansible with BigPanda.
 
 ## Overview
 This Ansible plugin is designed to fetch active incidents from BigPanda API asynchronously. It fetches activities for each incident and creates new events for new activities detected since the last polling. This plugin is part of an Event-Driven Ansible setup, allowing for real-time monitoring and response to BigPanda incident events.
