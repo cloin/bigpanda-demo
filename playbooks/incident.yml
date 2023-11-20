@@ -1,0 +1,86 @@
+---
+- name: Bigpanda ops
+  hosts: localhost
+  connection: localhost
+  gather_facts: true
+  vars:
+    bp_event_incident: "{{ ansible_eda.event.payload.incident.id }}"
+    bp_event_environment: "{{ ansible_eda.event.payload.metadata.environment_id }}"
+    bp_user_id: "" # For Incident assignment
+    bp_token: ""   # For ansible.builtin.uri:uri and bigpanda.incident
+  tasks:
+
+    # Original event payload does not contain asignee/assigner
+    - name: Get Incident from event
+      ansible.builtin.uri:
+        url: "https://api.bigpanda.io/resources/v2.0/environments/{{ bp_event_environment }}/incidents/{{ bp_event_incident }}"
+        method: GET
+        headers:
+          Authorization: "Bearer {{ bp_token }}"
+        return_content: true
+      register: incident
+
+    - name: Add comment with known issue
+      bigpanda.incident.comment:
+        incident_id: "{{ bp_event_incident }}"
+        environment_id: "{{ bp_event_environment }}"
+        comment: |
+          Ansible Automation Platform handling first touch
+        api_token: "{{ bp_token }}"
+
+    - name: Assign Incident to Ansible user
+      ansible.builtin.uri:
+        url: "https://api.bigpanda.io/resources/v2.0/environments/{{ bp_event_environment }}/incidents/{{ bp_event_incident }}/assignment"
+        method: PUT
+        headers:
+          Authorization: "Bearer {{ bp_token }}"
+          Accept: "application/json"
+          Content-Type: "application/json"
+        body: >
+          {
+            "assignee": "{{ bp_user_id }}"
+          }
+        body_format: json
+        status_code: 204
+        return_content: true
+      register: assignment
+
+    - name: Run troubleshooting command
+      ansible.builtin.command:
+        cmd: ping -c 3 BROKENHOST
+      ignore_errors: true
+      register: ping_result
+
+    - name: Comment on Icident with command output
+      bigpanda.incident.comment:
+        incident_id: "{{ bp_event_incident }}"
+        environment_id: "{{ bp_event_environment }}"
+        comment: |
+          Troubleshooting command output:
+          Failed == {{ ping_result.failed }}
+        api_token: "{{ bp_token }}"
+
+    - name: Add comment with known issue
+      when: ping_result.failed
+      bigpanda.incident.comment:
+        incident_id: "{{ bp_event_incident }}"
+        environment_id: "{{ bp_event_environment }}"
+        comment: |
+          Known issue. Attempting auto resolution
+        api_token: "{{ bp_token }}"
+
+    - name: Attempt resolution
+      when: ping_result.failed
+      ansible.builtin.command:
+        cmd: ping -c 3 localhost
+      register: resolution
+
+    - name: Add comment when issue fixed
+      when: not resolution.failed
+      bigpanda.incident.comment:
+        incident_id: "{{ bp_event_incident }}"
+        environment_id: "{{ bp_event_environment }}"
+        comment: |
+          Resolution task output:
+          Failed == {{ resolution.failed }}
+        api_token: "{{ bp_token }}"

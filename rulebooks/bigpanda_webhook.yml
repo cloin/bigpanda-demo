@@ -1,0 +1,22 @@
+---
+- name: Bigpanda webhook share
+  hosts: all
+  sources:
+    - ansible.eda.webhook:
+        host: 0.0.0.0
+        port: 5000
+      filters:
+        # This is a filter I created that forwards the event dictionary to another
+        # webhook receiver. Helps with capturing events for developing rulebooks
+        - cloin.eda.poster:
+            webhook_url: https://webhook.site/d40e18d0-9070-4d72-b16c-1566c1791540
+  rules:
+    - name: Respond to Incident
+      condition: |
+        event.payload.incident is defined and 
+        event.payload.incident.resolved == false and 
+        event.payload.incident.active == true and 
+        event.payload.incident.alerts is search("production-database-1",ignorecase=true)
+      action:
+        run_playbook:
+          name: playbooks/incident.yml
